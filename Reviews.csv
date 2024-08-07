@@ -1,4 +1,4 @@
-Review,Score,Sentiment
+review,score,sentiment
 I am a good boy,1.0,Positive
 I am a bad boy,-1.0,Negative
 I am a boy,0.0,Neutral
