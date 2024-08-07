@@ -4,11 +4,6 @@ use std::fs::File;
 use std::path::Path;
 use csv::Reader;
 
-fn addition(num1: f64, num2: f64) -> f64 {
-    let sum = num1 + num2;
-    return sum;
-}
-
 fn webpage_parser<P: AsRef<Path>>(filename: P) -> Result<(), Box<dyn Error>> {
     let file = File::open(filename)?;
     let mut rdr = Reader::from_reader(file);
@@ -21,7 +16,6 @@ fn webpage_parser<P: AsRef<Path>>(filename: P) -> Result<(), Box<dyn Error>> {
         let sentiment = &record[2];
 
         println!("Record {}:\nReview: {}\nScore: {}\nSentiment: {}\n", i + 1, review, score, sentiment);
-        // println!("Record {}:\nReview: {}\nSentiment: {}\n", i + 1, review, sentiment);
     }
 
     Ok(())
@@ -40,7 +34,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     io::stdin().read_line(&mut num2).expect("Failed to read input");
     let num2: f64 = num2.trim().parse().expect("Please enter a valid number.");
 
-    println!("The sum of {} and {} is {}.", num1, num2, addition(num1, num2));
+    println!("The sum of {} and {} is {}.", num1, num2, num1 + num2);
 
     let filename = "Reviews.csv";
     webpage_parser(filename)
