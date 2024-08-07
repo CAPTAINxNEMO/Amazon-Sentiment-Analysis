@@ -12,18 +12,33 @@ struct Reviews {
     sentiment: String,
 }
 
-fn webpage_parser<P: AsRef<Path>>(filename: P) -> Result<(), Box<dyn Error>> {
+fn analyzer<P: AsRef<Path>>(filename: P) -> Result<(), Box<dyn Error>> {
     let file = File::open(filename)?;
     let mut rdr = Reader::from_reader(file);
     let mut record_count = 0;
+    let mut total_score = 0.0;
 
     for result in rdr.deserialize() {
         let record: Reviews = result?;
-        record_count += 1;
         println!("Review    : {}\nScore     : {}\nSentiment : {}\n{}", record.review, record.score, record.sentiment, String::from("=").repeat(50));
+
+        record_count += 1;
+        total_score += record.score;
     }
 
-    println!("Total number of reviews: {}", record_count);
+    if record_count > 0 {
+        let average_score = total_score / record_count as f32;
+        println!("Total number of reviews : {}\nAverage score           : {}", record_count, average_score);
+        if average_score >= 0.05 {
+            println!("Sentiment               : Positive");
+        } else if average_score <= -0.05 {
+            println!("Sentiment               : Negative");
+        } else {
+            println!("Sentiment               : Neutral");
+        }
+    } else {
+        println!("No reviews processed.");
+    }
 
     Ok(())
 }
@@ -44,5 +59,5 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("The sum of {} and {} is {}.\n{}", num1, num2, num1 + num2, String::from("=").repeat(50));
 
     let filename = "Reviews.csv";
-    webpage_parser(filename)
+    analyzer(filename)
 }
