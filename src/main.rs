@@ -1,18 +1,61 @@
-use std::io::{self, Write};
-use std::error::Error;
-use std::fs::File;
-use std::path::Path;
-use csv::Reader;
-use serde::Deserialize;
+use std::{error::Error, fs::{File, OpenOptions}, io::{self, Write}, path::Path};
+use csv::{Writer, Reader};
+use serde::{Serialize, Deserialize};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 struct Reviews {
     review: String,
     score: f32,
     sentiment: String,
 }
 
-fn analyzer<P: AsRef<Path>>(filename: P) -> Result<(), Box<dyn Error>> {
+fn scraper <P: AsRef<Path>, S: Into<String>>(filename: P, link: S) -> Result<(), Box<dyn Error>> {
+    let link = link.into();
+    println!("link: {}", link);
+
+    let file = OpenOptions::new().write(true).truncate(true).open(filename)?;
+    let mut wtr = Writer::from_writer(file);
+
+    let reviews_list = vec![
+        Reviews {
+            review: "This is a great product!".to_string(),
+            score: 1.0,
+            sentiment: "Positive".to_string(),
+        },
+        Reviews {
+            review: "This is a bad product!".to_string(),
+            score: -1.0,
+            sentiment: "Negative".to_string(),
+        },
+        Reviews {
+            review: "This is an okay product!".to_string(),
+            score: 0.3,
+            sentiment: "Positive".to_string(),
+        },
+        Reviews {
+            review: "I am a boy.".to_string(),
+            score: 0.0,
+            sentiment: "Neutral".to_string(),
+        },
+        Reviews {
+            review: "I am a good boy.".to_string(),
+            score: 1.0,
+            sentiment: "Positive".to_string(),
+        },
+        Reviews {
+            review: "I am a bad boy.".to_string(),
+            score: -1.0,
+            sentiment: "Neutral".to_string(),
+        },
+    ];
+    
+    for review in &reviews_list {
+        wtr.serialize(review)?;
+    }
+    Ok(())
+}
+
+fn analyzer <P: AsRef<Path>>(filename: P) -> Result<(), Box<dyn Error>> {
     let file = File::open(filename)?;
     let mut rdr = Reader::from_reader(file);
     let mut record_count = 0;
@@ -44,20 +87,13 @@ fn analyzer<P: AsRef<Path>>(filename: P) -> Result<(), Box<dyn Error>> {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    print!("Enter num1: ");
+    print!("Enter product link: ");
     io::stdout().flush().unwrap();
-    let mut num1 = String::new();
-    io::stdin().read_line(&mut num1).expect("Failed to read input");
-    let num1: f32 = num1.trim().parse().expect("Please enter a valid number.");
-
-    print!("Enter num2: ");
-    io::stdout().flush().unwrap();
-    let mut num2 = String::new();
-    io::stdin().read_line(&mut num2).expect("Failed to read input");
-    let num2: f32 = num2.trim().parse().expect("Please enter a valid number.");
-
-    println!("The sum of {} and {} is {}.\n{}", num1, num2, num1 + num2, String::from("=").repeat(50));
+    let mut link = String::new();
+    io::stdin().read_line(&mut link).expect("Failed to read input");
+    let link: String = link.trim().parse().expect("Please enter a valid link.");
 
     let filename = "Reviews.csv";
+    let _ = scraper(filename, link);
     analyzer(filename)
 }
