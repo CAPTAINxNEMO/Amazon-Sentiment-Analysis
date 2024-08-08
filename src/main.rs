@@ -1,4 +1,6 @@
 use std::{error::Error, fs::{File, OpenOptions}, io::{self, Write}, path::Path};
+use reqwest::Client;
+use scraper::{Html, Selector};
 use csv::{Writer, Reader};
 use serde::{Serialize, Deserialize};
 
@@ -9,9 +11,20 @@ struct Reviews {
     sentiment: String,
 }
 
-fn scraper <P: AsRef<Path>, S: Into<String>>(filename: P, link: S) -> Result<(), Box<dyn Error>> {
+async fn scraper <P: AsRef<Path>, S: Into<String>>(filename: P, link: S) -> Result<(), Box<dyn Error>> {
     let link = link.into();
     println!("link: {}", link);
+
+    let client = Client::new();
+    let response = client.get(link.as_str()).send().await?.text().await?;
+    println!("response: {}", response);
+    let fragment = Html::parse_document(&response);
+    let selector = Selector::parse(".row").unwrap();
+
+    for element in fragment.select(&selector) {
+        let text = element.inner_html();
+        println!("{}", text);
+    }
 
     let file = OpenOptions::new().write(true).truncate(true).open(filename)?;
     let mut wtr = Writer::from_writer(file);
@@ -86,7 +99,8 @@ fn analyzer <P: AsRef<Path>>(filename: P) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn main() -> Result<(), Box<dyn Error>> {
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn Error>> {
     print!("Enter product link: ");
     io::stdout().flush().unwrap();
     let mut link = String::new();
@@ -94,6 +108,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     let link: String = link.trim().parse().expect("Please enter a valid link.");
 
     let filename = "Reviews.csv";
-    let _ = scraper(filename, link);
+    let _ = scraper(filename, link).await;
     analyzer(filename)
 }
