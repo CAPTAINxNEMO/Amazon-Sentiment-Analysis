@@ -1,6 +1,7 @@
 use std::{error::Error, fs::{File, OpenOptions}, io::{self, Write}, path::Path};
-use reqwest::Client;
+use reqwest::blocking::get;
 use scraper::{Html, Selector};
+use vader_sentiment::SentimentIntensityAnalyzer;
 use csv::{Writer, Reader};
 use serde::{Serialize, Deserialize};
 
@@ -11,18 +12,29 @@ struct Reviews {
     sentiment: String,
 }
 
-async fn scraper <P: AsRef<Path>, S: Into<String>>(filename: P, link: S) -> Result<(), Box<dyn Error>> {
+// async fn scraper <P: AsRef<Path>, S: Into<String>>(filename: P, link: S) -> Result<(), Box<dyn Error>> {
+fn scraper <P: AsRef<Path>, S: Into<String>>(filename: P, link: S) -> Result<(), Box<dyn Error>> {
     let link = link.into();
-    println!("link: {}", link);
+    // println!("link: {}", link);
 
-    let client = Client::new();
-    let response = client.get(link.as_str()).send().await?.text().await?;
-    println!("response: {}", response);
-    let fragment = Html::parse_document(&response);
-    let selector = Selector::parse(".row").unwrap();
+    // let client = Client::new();
+    // let response = client.get(link.as_str()).send().await?.text().await?;
+    // println!("response: {}", response);
+    // let fragment = Html::parse_document(&response);
+    // let selector = Selector::parse(".row").unwrap();
 
-    for element in fragment.select(&selector) {
-        let text = element.inner_html();
+    // for element in fragment.select(&selector) {
+    //     let text = element.inner_html();
+    //     println!("{}", text);
+    // }
+
+    let response = get(link)?.text()?;
+    println!("{}", response);
+    let document = Html::parse_document(&response);
+    let selector = Selector::parse("div.ZmyHeo > div > div").unwrap();
+
+    for element in document.select(&selector) {
+        let text = element.text().collect::<Vec<_>>().concat();
         println!("{}", text);
     }
 
@@ -61,10 +73,11 @@ async fn scraper <P: AsRef<Path>, S: Into<String>>(filename: P, link: S) -> Resu
             sentiment: "Neutral".to_string(),
         },
     ];
-    
+
     for review in &reviews_list {
         wtr.serialize(review)?;
     }
+
     Ok(())
 }
 
@@ -73,6 +86,10 @@ fn analyzer <P: AsRef<Path>>(filename: P) -> Result<(), Box<dyn Error>> {
     let mut rdr = Reader::from_reader(file);
     let mut record_count = 0;
     let mut total_score = 0.0;
+
+    let analyzer = SentimentIntensityAnalyzer::new();
+    println!("{:#?}", analyzer.polarity_scores("This is a great product!"));
+    println!("{:#?}", analyzer.polarity_scores("I am a bad boy."));
 
     for result in rdr.deserialize() {
         let record: Reviews = result?;
@@ -99,8 +116,9 @@ fn analyzer <P: AsRef<Path>>(filename: P) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>> {
+// #[tokio::main]
+// async fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> Result<(), Box<dyn Error>> {
     print!("Enter product link: ");
     io::stdout().flush().unwrap();
     let mut link = String::new();
@@ -108,6 +126,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let link: String = link.trim().parse().expect("Please enter a valid link.");
 
     let filename = "Reviews.csv";
-    let _ = scraper(filename, link).await;
+    let _ = scraper(filename, link);// .await;
     analyzer(filename)
 }
